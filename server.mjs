@@ -15,8 +15,11 @@ if (existsSync(envPath)) {
 const PORT = Number(process.env.PORT || 3000);
 const MCP = "https://questathon.aihackerscollective.com/api/public/mcp";
 const MINUTE = 60_000;
-mkdirSync(join(root, "data"), { recursive: true });
-const db = new DatabaseSync(join(root, "data", "crm.sqlite"));
+// DATA_DIR lets managed hosts mount durable storage without placing a database
+// inside the ephemeral build directory. Local development continues to use data/.
+const dataDir = process.env.DATA_DIR || join(root, "data");
+mkdirSync(dataDir, { recursive: true });
+const db = new DatabaseSync(join(dataDir, "crm.sqlite"));
 db.exec(`
   CREATE TABLE IF NOT EXISTS snapshots (kind TEXT PRIMARY KEY, payload TEXT NOT NULL, fetched_at TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS calls (id INTEGER PRIMARY KEY, tool TEXT NOT NULL, called_at INTEGER NOT NULL, outcome TEXT NOT NULL);

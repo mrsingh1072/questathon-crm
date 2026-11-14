@@ -1,10 +1,6 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "redirects": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://questathon-crm.onrender.com/api/:path*",
-      "permanent": false
-    },
     {
       "source": "/:path*",
       "destination": "https://questathon-crm.onrender.com/:path*",
