@@ -96,4 +96,9 @@ if (process.argv.includes("--sync-once")) {
   try { await work(); const state = dashboard(); console.log(JSON.stringify({ configured: state.configured, accountsStored: state.accounts.length, rateLimitSeconds: state.rateLimitSeconds, signalsStored: Boolean(state.signals) })); }
   catch (error) { console.error(`Sync failed: ${error.message}`); process.exitCode = 1; }
   finally { db.close(); }
-} else server.listen(PORT,()=>console.log(`Questathon CRM listening on http://localhost:${PORT}`));
+} else server.listen(PORT,()=>{
+  console.log(`Questathon CRM listening on http://localhost:${PORT}`);
+  // Resume the persisted, rate-limited queue after host restarts. This never
+  // bypasses the one-call-per-minute gate in callTool().
+  work().catch(() => {});
+});
