@@ -65,6 +65,16 @@ async function work() {
   if (!accountSnap) { save("accounts", await callTool("get_my_accounts")); return; }
   const accounts = accountsFrom(accountSnap.data);
   for (let i=0;i<accounts.length;i++) { const key=accountKey(accounts[i],i); if (!load(`paperwork:${key}`)) { save(`paperwork:${key}`, await callTool("get_all_paperwork", { account: key })); return; } }
+  const globalReads = [
+    ["data_format", "get_data_format"],
+    ["feature_requests", "get_feature_requests"],
+    ["release_notes", "get_release_notes"],
+    ["flytbase_team", "get_flytbase_team"],
+    ["notes", "list_notes"],
+  ];
+  for (const [kind, tool] of globalReads) {
+    if (!load(kind)) { save(kind, await callTool(tool)); return; }
+  }
   const pending = db.prepare("SELECT fingerprint,payload FROM events WHERE noted=0 ORDER BY received_at LIMIT 1").get();
   if (pending) {
     const event = JSON.parse(pending.payload);
@@ -78,4 +88,9 @@ async function work() {
 }
 setInterval(() => { work().catch(() => {}); }, 15_000);
 function staticFile(pathname, res) { const file = pathname === "/" ? "index.html" : pathname.slice(1); if (file.includes("..")) return false; const full=join(root,"public",file); if (!existsSync(full)) return false; const type={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".css":"text/css; charset=utf-8"}[extname(full)] || "application/octet-stream"; res.writeHead(200,{"content-type":type});res.end(readFileSync(full));return true; }
-http.createServer(async (req,res) => { const u=new URL(req.url,`http://${req.headers.host}`); if (req.method === "GET" && u.pathname === "/api/dashboard") return json(res,200,dashboard()); if (req.method === "POST" && u.pathname === "/api/sync") { try { await work(); return json(res,200,{ok:true,...dashboard()}); } catch(e) { return json(res,429,{ok:false,error:e.message,...dashboard()}); } } if (!staticFile(u.pathname,res)) json(res,404,{error:"Not found"}); }).listen(PORT,()=>console.log(`Questathon CRM listening on http://localhost:${PORT}`));
+const server = http.createServer(async (req,res) => { const u=new URL(req.url,`http://${req.headers.host}`); if (req.method === "GET" && u.pathname === "/api/dashboard") return json(res,200,dashboard()); if (req.method === "POST" && u.pathname === "/api/sync") { try { await work(); return json(res,200,{ok:true,...dashboard()}); } catch(e) { return json(res,429,{ok:false,error:e.message,...dashboard()}); } } if (!staticFile(u.pathname,res)) json(res,404,{error:"Not found"}); });
+if (process.argv.includes("--sync-once")) {
+  try { await work(); const state = dashboard(); console.log(JSON.stringify({ configured: state.configured, accountsStored: state.accounts.length, rateLimitSeconds: state.rateLimitSeconds, signalsStored: Boolean(state.signals) })); }
+  catch (error) { console.error(`Sync failed: ${error.message}`); process.exitCode = 1; }
+  finally { db.close(); }
+} else server.listen(PORT,()=>console.log(`Questathon CRM listening on http://localhost:${PORT}`));
