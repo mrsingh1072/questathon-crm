@@ -17,6 +17,10 @@ For both accounts the dashboard provides five manager questions: book value, pow
 
 The browser polls this server every 15 seconds. The server performs no more than one MCP request per 60 seconds and only calls `get_signals` after initial account/paperwork data is stored. New signals are persisted; a compact factual note is written back with `write_note` on the next allowed slot.
 
+## Deployment
+
+Vercel serves the static frontend from `public/`; its `vercel.json` routes `/api/*` requests to the Render backend. Keep `AQ_TOKEN` configured only on Render.
+
 ## Security
 
 `AQ_TOKEN` is read only by `server.mjs`. It is never returned from an API endpoint, written to SQLite, bundled into the client, or included in this repository.
